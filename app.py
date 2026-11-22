@@ -6,6 +6,7 @@ attachments: an .ics calendar invite and the QR code PNG.
 """
 
 import calendar
+import html
 import os
 import re
 import smtplib
@@ -54,6 +55,16 @@ PLANS = {
     "Picnic": ("🧺", "Blanket, snacks, sunshine"),
 }
 DURATION_H = 2
+CUSTOM = ("✨", "Their own idea")
+
+
+def plan_info(plan):
+    """(emoji, blurb) for one of the 4 plans, or for a typed-in idea."""
+    return PLANS.get(plan, CUSTOM)
+
+
+def ics_text(v):
+    return str(v).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 # ---------- styling ----------
 st.markdown(
@@ -130,7 +141,7 @@ def gcal_link():
         "action": "TEMPLATE",
         "text": f"{ss.plan} with {OWNER} 💘",
         "dates": f"{s.strftime(fmt)}/{e.strftime(fmt)}",
-        "details": f"{PLANS[ss.plan][1]}. It's a date!",
+        "details": f"{plan_info(ss.plan)[1]}. It's a date!",
     }
     return "https://calendar.google.com/calendar/render?" + urlencode(params, quote_via=quote)
 
@@ -156,8 +167,8 @@ def ics_bytes():
         f"DTSTAMP:{stamp}",
         f"DTSTART:{s.strftime(fmt)}",
         f"DTEND:{e.strftime(fmt)}",
-        f"SUMMARY:{ss.plan} with {OWNER}",
-        f"DESCRIPTION:{PLANS[ss.plan][1]}. Booked by {ss.get('guest') or 'your date'}.",
+        f"SUMMARY:{ics_text(f'{ss.plan} with {OWNER}')}",
+        f"DESCRIPTION:{ics_text(f'{plan_info(ss.plan)[1]}. Booked by ' + (ss.get('guest') or 'your date') + '.')}",
         "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY",
         "DESCRIPTION:Date tomorrow!", "END:VALARM",
         "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY",
@@ -174,7 +185,7 @@ def summary_text():
         f"{who} said YES! 💘\n\n"
         f"Date: {ss.date.strftime('%A, %B %d, %Y')}\n"
         f"Time: {ss.time}\n"
-        f"Plan: {PLANS[ss.plan][0]} {ss.plan}\n"
+        f"Plan: {plan_info(ss.plan)[0]} {ss.plan}\n"
         + (f"Their email: {ss.guest_email}\n" if ss.get("guest_email") else "")
         + (f"Their phone: {ss.contact}\n" if ss.get("contact") else "")
         + f"\nAttached: calendar invite (.ics) and QR code.\nGoogle Calendar: {gcal_link()}\n"
@@ -219,7 +230,7 @@ def send_guest_email():
         return None
     body = (
         f"You're going on a date with {OWNER}! 💘\n\n"
-        f"{PLANS[ss.plan][0]} {ss.plan}\n"
+        f"{plan_info(ss.plan)[0]} {ss.plan}\n"
         f"{ss.date.strftime('%A, %B %d, %Y')} at {ss.time}\n\n"
         "Open the attached invite to add it to your calendar (reminders included),\n"
         f"or use Google Calendar: {gcal_link()}\n"
@@ -305,7 +316,20 @@ elif ss.step == "what":
             )
             if st.button("Selected ✓" if picked else f"Choose {name}", key=f"p{i}", use_container_width=True):
                 ss.plan = name
+                ss.custom_idea = ""
                 st.rerun()
+
+    def use_custom():
+        idea = ss.custom_idea.strip()[:60]
+        if idea:
+            ss.plan = idea
+        elif ss.get("plan") not in PLANS:
+            ss.pop("plan", None)
+
+    st.text_input("✨ Something else? Type your own idea", key="custom_idea",
+                  placeholder="e.g. Bowling, mini golf, cooking together…", on_change=use_custom)
+    if ss.get("plan") and ss.plan not in PLANS:
+        st.success(f"✨ {ss.plan}: great idea!")
     with st.expander("Who's saying yes? (optional)"):
         ss.guest = st.text_input("Your name", value=ss.get("guest", ""))
         ss.guest_email = st.text_input("Your email (we'll send you the calendar invite)",
@@ -325,7 +349,7 @@ elif ss.step == "done":
     st.title("It's a date! 💘")
     st.markdown(
         f'<div class="card"><p class="center" style="font-size:18px">'
-        f'<b>{PLANS[ss.plan][0]} {ss.plan}</b><br>'
+        f'<b>{plan_info(ss.plan)[0]} {html.escape(ss.plan)}</b><br>'
         f'{ss.date.strftime("%A, %B %d, %Y")} at <b>{ss.time}</b></p></div>',
         unsafe_allow_html=True,
     )
