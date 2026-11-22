@@ -97,7 +97,8 @@ def busy_slots(day):
         cal = icalendar.Calendar.from_ical(fetch_calendar(CAL_ICS_URL))
         events = recurring_ical_events.of(cal).at(day)  # expands repeating events too
     except Exception as e:
-        return set(), f"Couldn't read the calendar ({type(e).__name__})."
+        return set(), (f"Couldn't read the calendar ({type(e).__name__}): check GCAL_ICS_URL is the "
+                       "*Secret address in iCal format*, not the public address.")
     blocked = set()
     for ev in events:
         if str(ev.get("TRANSP", "")).upper() == "TRANSPARENT":  # marked "Free"
