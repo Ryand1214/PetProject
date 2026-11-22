@@ -1,0 +1,12 @@
+# Databricks Apps config. Store the Gmail app password as a Databricks secret,
+# add it to the app as a resource named "gmail-app-password", then deploy.
+command: ["streamlit", "run", "app.py"]
+env:
+  - name: GMAIL_SENDER
+    value: "your.sender@gmail.com"
+  - name: GMAIL_APP_PASSWORD
+    valueFrom: "gmail-app-password"
+  - name: GCAL_ICS_URL
+    valueFrom: "gcal-ics-url"
+  - name: NOTIFY_TO
+    value: "ryandoswell123@gmail.com"

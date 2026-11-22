@@ -1,0 +1,4 @@
+streamlit>=1.36,<1.68
+qrcode[pil]>=7.4
+icalendar>=5.0
+recurring-ical-events>=2.0
